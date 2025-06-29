@@ -1,0 +1,266 @@
+:root {
+    --primary: #00f2ff; 
+    --primary-light: #00ffea;
+    --primary-dark: #00a8ff;
+    --secondary: #ff00aa; 
+    --text: #ffffff;
+    --text-light: #cccccc;
+    --bg: #0a0a0a;
+    --card-bg: #1a1a1a;
+    --border: #333333;
+    --neon-glow: 0 0 10px rgba(0, 242, 255, 0.8),
+                 0 0 20px rgba(0, 242, 255, 0.6),
+                 0 0 30px rgba(0, 242, 255, 0.4);
+  }
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Rajdhani', 'Tajawal', sans-serif;
+  }
+  
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+    background-image: 
+      radial-gradient(circle at 10% 20%, rgba(0, 242, 255, 0.05) 0%, transparent 20%),
+      radial-gradient(circle at 90% 80%, rgba(255, 0, 170, 0.05) 0%, transparent 20%);
+  }
+  
+  .user-form-container {
+    background: var(--card-bg);
+    width: 100%;
+    max-width: 600px;
+    border-radius: 15px;
+    box-shadow: var(--neon-glow);
+    overflow: hidden;
+    margin: 2rem auto;
+    border: 1px solid var(--primary);
+    animation: fadeIn 0.5s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .form-header {
+    background: linear-gradient(to right, var(--primary), var(--secondary));
+    color: white;
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .form-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+    z-index: 0;
+  }
+  
+  .form-header h1 {
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: 700;
+    text-shadow: 0 0 5px var(--primary),
+                 0 0 10px var(--primary);
+    position: relative;
+    z-index: 1;
+  }
+  
+  .back-btn {
+    color: white;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 1;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .back-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(5px);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  }
+  
+  .user-form {
+    padding: 2rem;
+    background: var(--card-bg);
+  }
+  
+  .form-group {
+    margin-bottom: 1.8rem;
+    position: relative;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 0.8rem;
+    color: var(--primary);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1rem;
+    text-shadow: 0 0 5px rgba(0, 242, 255, 0.3);
+  }
+  
+  .form-group input {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: white;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+  }
+  
+  .form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background-color: rgba(0, 0, 0, 0.5);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.7),
+                0 0 15px var(--primary);
+  }
+  
+  .input-border {
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: var(--primary);
+    transition: width 0.4s ease;
+    box-shadow: 0 0 10px var(--primary);
+  }
+  
+  .form-group input:focus ~ .input-border {
+    width: 100%;
+  }
+  
+  .submit-btn {
+    background: linear-gradient(to right, var(--primary), var(--secondary));
+    color: white;
+    border: none;
+    padding: 1.2rem;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+    justify-content: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
+  }
+  
+  .submit-btn:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 25px var(--primary),
+                0 0 15px var(--secondary);
+  }
+  
+  .submit-btn:active {
+    transform: translateY(0);
+  }
+  
+  .btn-border {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+  
+  .submit-btn:hover .btn-border {
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.05);
+  }
+  
+  .alert {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-align: center;
+    animation: slideDown 0.3s ease-out;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .alert-danger {
+    background-color: rgba(255, 0, 85, 0.2);
+    color: #ff0055;
+    border: 1px solid #ff0055;
+    text-shadow: 0 0 5px rgba(255, 0, 85, 0.3);
+    box-shadow: 0 0 15px rgba(255, 0, 85, 0.3);
+  }
+  
+  .alert-success {
+    background-color: rgba(0, 255, 170, 0.2);
+    color: #00ffaa;
+    border: 1px solid #00ffaa;
+    text-shadow: 0 0 5px rgba(0, 255, 170, 0.3);
+    box-shadow: 0 0 15px rgba(0, 255, 170, 0.3);
+  }
+  
+  @media (max-width: 768px) {
+    .user-form-container {
+      margin: 1rem;
+      border-radius: 10px;
+    }
+    
+    .form-header {
+      padding: 1.2rem;
+      flex-direction: column;
+      gap: 15px;
+      text-align: center;
+    }
+    
+    .back-btn {
+      align-self: center;
+    }
+    
+    .user-form {
+      padding: 1.5rem;
+    }
+  }
+  
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Tajawal:wght@400;500;600;700&display=swap');
