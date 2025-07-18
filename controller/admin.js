@@ -1,156 +1,217 @@
+const Card = require('../models/card');
+const User = require('../models/user');
+const Phone = require('../models/device');
+const Account = require('../models/account');
+const admin = require('firebase-admin');
+const sequelize = require('../util/database');
+const axios = require('axios');
+const { where } = require('sequelize');
 
+console.log("📦 Admin routes loaded");
 
+// ✅ 1. جلب معلومات المستخدم
+exports.getinfo = async (req, res, next) => {
+  console.log('✅ تابع getinfo تم استدعاؤه');
+  console.log('🕒 الطلب الوارد:', req.body);
 
-exports.signup = (req, res, next) => {
-  const { username, email, } = req.body;
-  if (username === 'ismail' && password === '12345') {
-    req.session.isAdmin = true;
-    req.session.admin = {
-      username: 'ismail',
-      role: 'superadmin'
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      console.log('❌ خطأ: userId مطلوب');
+      return res.status(400).json({ error: 'User ID required' });
+    }
+
+    const user = await User.findOne({ where: { userId } });
+    if (!user) {
+      console.log('❌ المستخدم غير موجود:', userId);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const card = await Card.findOne({ where: { userId } });
+
+    const responseData = {
+      id: user.userId,
+      username: user.userName,
+      email: user.Email,
+      phoneNumber: user.phoneNumber,
+      cardNumber: card ? card.cardNumber : null
     };
-    res.redirect('/admin/dashoard');
-  } else {
-    req.flash('error', 'Incorrect login credentials');
-    res.redirect('/admin/login');
+
+    console.log('📤 الاستجابة:', responseData);
+    res.json(responseData);
+
+  } catch (error) {
+    console.error('❌ خطأ في getinfo:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-exports.getDashboard = (req, res, next) => {
-  res.render('admin/dashoard'); 
-};
-
-exports.getAddUser = (req, res, next) => {
-  res.render('admin/add-user');
-};
-
-exports.postAddUser = async (req, res, next) => {
-    try {
-        const { username, password, email, phone } = req.body;
-        const balance=req.body.balance;
-        console.log('//////////////////////');
-        console.log(balance);
-        console.log('//////////////////////');
-
-        const existingUser = await User.findOne({ where: { email } });
-        if (existingUser) {
-            req.flash('error', 'Email already exists');
-            return res.redirect('/admin/user/add');
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 12);
-        const user = await User.create({
-            email,
-            password: hashedPassword,
-            name: username,
-            phonenumber: phone
-        });
-
-        const account = await user.createAccount({ balance: balance });
-
-        const cardNumber = await generateCardNumber();
-        await account.createCard({ cardNumber });
-
-        req.flash('success', 'User, account, and card created successfully');
-        res.redirect('/admin/dashoard');
-
-    } catch (error) {
-        console.error('Error in postAddUser:', error);
-        req.flash('error', 'Error creating user: ' + error.message);
-        res.redirect('/admin/user/add');
-    }
-};
+// ✅ 2. إرسال طلب الدفع
+const { v4: uuidv4 } = require('uuid');
+const PendingPayment = require('../models/pending-payment'); // تأكد إنك مستورد هذا النموذج
 
 exports.processPayment = async (req, res) => {
-  
-    try {
-        const { cardNumber, amount } = req.body;
-        const paymentAmount = parseFloat(parseFloat(amount).toFixed(2)); 
-
-        console.log('Payment data:', { cardNumber, paymentAmount });
-
-        const card = await Card.findOne({
-            where: { cardNumber },
-            include: [{ model: Account, required: true }],
-        });
-
-        if (!card) throw new Error('Invalid card details');
-
-        console.log('Current balance (before update):', card.account.balance);
-
-        if (card.account.balance < paymentAmount) {
-            throw new Error('Insufficient balance');
-        }
-
-        await sequelize.query(
-            'UPDATE accounts SET balance = balance - :amount WHERE id = :accountId',
-            {
-                replacements: {
-                    amount: paymentAmount,
-                    accountId: card.account.id,
-                },
-                type: sequelize.QueryTypes.UPDATE,
-            }
-        );
-
-       
-        await card.account.reload();
-        console.log('Balance after update:', card.account.balance);
-
-        res.json({
-            success: true,
-            message: 'Payment processed successfully',
-            newBalance: card.account.balance,
-        });
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-};
-exports.postCheck = async (req, res) => {
-  console.log("hhhhhhhhhhhhhhhhhhhhhhhhhhh");
   try {
-    const { email, password, cardNumber } = req.body;
+    const { cardNumber, amount, username, email } = req.body;
+    const paymentAmount = parseFloat(amount);
+
+    if (!cardNumber || !amount) {
+      return res.status(400).json({ success: false, message: 'البيانات ناقصة' });
+    }
 
     const card = await Card.findOne({
       where: { cardNumber },
-      include: [{
-        model: Account,
-        required: true,
-        include: [{
-          model: User 
-      }],
-    }]});
+      include: [{ model: Account }],
+    });
 
-    if (!card) {
-      throw new Error('Invalid card details');
-    }
-    if (!card.account || !card.account.user) {
-      throw new Error('Account or user not found');
+    if (!card || !card.account) {
+      throw new Error('بطاقة أو حساب غير صالح');
     }
 
-    const user = card.account.user;
-    
-    const isEmailValid = user.email === email;
-const isPasswordValid = await bcrypt.compare(password, user.password);    
-    if (!isEmailValid || !isPasswordValid) {
-      throw new Error('Invalid user credentials');
+    const userId = card.account.userId;
+
+    const deviceTokenEntry = await Phone.findOne({ where: { userId } });
+
+    if (!deviceTokenEntry || !deviceTokenEntry.deviceToken) {
+      throw new Error('لا يوجد توكن للمستخدم');
     }
+
+    const userDeviceToken = deviceTokenEntry.deviceToken;
+    const transactionId = "1"; // توليد رقم العملية
+
+    // إرسال إشعار Firebase
+    await admin.messaging().send({
+      token: userDeviceToken,
+      notification: {
+        title: 'طلب دفع جديد',
+        body: `هل توافق على دفع ${paymentAmount}؟`,
+      },
+      data: {
+        userId: userId.toString(),
+        amount: paymentAmount.toString(),
+        cardNumber,
+        transactionId, // ضروري
+      },
+    });
+
+    // حفظ العملية بقاعدة البيانات
+    await PendingPayment.create({
+      transactionId,
+      userId,
+      cardNumber,
+      amount: paymentAmount,
+      status: 'pending',
+    });
 
     res.json({
       success: true,
-      message: 'Authentication successful',
-      userData: {
-        name: user.name,
-        balance: card.account.balance
-      }
+      message: 'تم إرسال الإشعار، بانتظار موافقة المستخدم.',
+      transactionId,
     });
 
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(400).json({ 
-      success: false,
-      message: error.message
+  } catch (err) {
+    console.error('❌ خطأ في processPayment:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+exports.approvePayment = async (req, res) => {
+  try {
+    const { userId, amount, cardNumber } = req.body;
+    const paymentAmount = parseFloat(parseFloat(amount).toFixed(2));
+     transactionId="1";
+
+
+    if (!userId || !amount || !cardNumber || !transactionId) {
+      return res.status(400).json({ success: false, message: 'بيانات ناقصة' });
+    }
+
+    const card = await Card.findOne({
+      where: { cardNumber },
+      include: [{ model: Account, required: true }],
     });
+    if (!card) {
+      console.log("❌ لم يتم العثور على البطاقة");
+      throw new Error('تفاصيل البطاقة غير صحيحة');
+    }
+
+    console.log("✅ تم العثور على البطاقة:");
+    console.log(JSON.stringify(card, null, 2));
+
+    if (!card.account) {
+      console.log("❌ لم يتم العثور على الحساب المرتبط بالبطاقة");
+      throw new Error('البطاقة غير مرتبطة بحساب صالح');
+    }
+
+    if (!card) throw new Error('تفاصيل البطاقة غير صحيحة');
+
+    if (card.account.balance < paymentAmount) {
+      throw new Error('الرصيد غير كافٍ');
+    }
+
+  await sequelize.query(
+  'UPDATE accounts SET balance = balance - :amount WHERE accountId = :accountId',
+  {
+    replacements: {
+      amount: paymentAmount,
+      accountId: card.account.accountId,
+    },
+    type: sequelize.QueryTypes.UPDATE,
+  }
+);
+
+
+
+    await card.account.reload();
+
+    // إرسال النتيجة عبر WebSocket
+    const io = req.app.get('io');
+    io.to(transactionId).emit('payment-result', {
+      status: 'approved',
+      transactionId,
+      amount: paymentAmount,
+    });
+
+    // تحديث حالة العملية إلى approved
+    await PendingPayment.update(
+      { status: 'approved' },
+      { where: { transactionId } }
+    );
+
+    res.json({ success: true, message: 'تمت الموافقة على العملية' });
+
+  } catch (err) {
+    console.error('❌ خطأ في approvePayment:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+exports.rejectPayment = async (req, res) => {
+  try {
+    const { userId, amount, cardNumber } = req.body;
+        transactionId="1";
+
+
+    if (!userId || !amount || !cardNumber || !transactionId) {
+      return res.status(400).json({ success: false, message: 'بيانات ناقصة' });
+    }
+
+    // إرسال النتيجة عبر WebSocket
+    const io = req.app.get('io');
+    io.to(transactionId).emit('payment-result', {
+      status: 'rejected',
+      transactionId,
+      amount,
+    });
+
+    // تحديث حالة العملية إلى rejected
+    await PendingPayment.update(
+      { status: 'rejected' },
+      { where: { transactionId } }
+    );
+
+    res.json({ success: true, message: 'تم الرفض وإبلاغ الموقع التجاري' });
+
+  } catch (err) {
+    console.error('❌ خطأ في rejectPayment:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
